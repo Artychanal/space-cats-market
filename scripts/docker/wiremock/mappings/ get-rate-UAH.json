@@ -1,0 +1,8 @@
+{
+  "request": { "method": "GET", "urlPathPattern": "/api/rates/USD" },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": { "code": "USD", "rateToUAH": 1.00 }
+  }
+}

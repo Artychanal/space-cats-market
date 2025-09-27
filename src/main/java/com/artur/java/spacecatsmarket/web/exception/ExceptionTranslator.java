@@ -2,59 +2,83 @@ package com.artur.java.spacecatsmarket.web.exception;
 
 import com.artur.java.spacecatsmarket.service.exception.ProductNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.Builder;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
-import org.springframework.lang.NonNull;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.net.URI;
-import java.util.List;
+import java.util.stream.Collectors;
 
-import static org.springframework.http.HttpStatus.*;
-
-@Slf4j
 @ControllerAdvice
-public class ExceptionTranslator extends ResponseEntityExceptionHandler {
-
-    record Violation(String fieldName, String reason) { @Builder public Violation{} }
+public class ExceptionTranslator {
 
     @ExceptionHandler(ProductNotFoundException.class)
-    ProblemDetail handleNotFound(ProductNotFoundException ex, HttpServletRequest req) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(NOT_FOUND, ex.getMessage());
-        pd.setType(URI.create("product-not-found"));
-        pd.setTitle("Product Not Found");
-        pd.setProperty("status", 404);
-        pd.setProperty("error", "Not Found");
-        pd.setProperty("message", ex.getMessage());
-        pd.setProperty("path", req.getRequestURI());
-        return pd;
+    public ResponseEntity<ErrorResponse> handleNotFound(ProductNotFoundException ex, HttpServletRequest req) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ErrorResponse.builder()
+                        .status(404)
+                        .error("Not Found")
+                        .message(ex.getMessage())
+                        .path(req.getRequestURI())
+                        .build()
+        );
     }
 
-    @Override @NonNull
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(@NonNull MethodArgumentNotValidException ex,
-                                                                  @NonNull HttpHeaders headers, @NonNull HttpStatusCode status, @NonNull WebRequest request) {
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
+        String msg = ex.getBindingResult().getFieldErrors().stream()
+                .map(f -> "Field '%s' %s".formatted(f.getField(), f.getDefaultMessage()))
+                .collect(Collectors.joining("; "));
+        return ResponseEntity.badRequest().body(
+                ErrorResponse.builder()
+                        .status(400)
+                        .error("Bad Request")
+                        .message(msg)
+                        .path(req.getRequestURI())
+                        .build()
+        );
+    }
 
-        List<Violation> vs = ex.getBindingResult().getFieldErrors().stream()
-                .map(f -> new Violation(f.getField(), f.getDefaultMessage())).toList();
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                            HttpServletRequest req) {
+        String expected = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "?";
+        String msg = "Failed to convert '%s' with value: '%s' (expected %s)"
+                .formatted(ex.getName(), ex.getValue(), expected);
 
-        String detail = vs.stream().map(v -> "Field '%s' %s".formatted(v.fieldName(), v.reason()))
-                .reduce((a,b)->a+"; "+b).orElse("Validation failed");
+        return ResponseEntity.badRequest().body(
+                ErrorResponse.builder()
+                        .status(400)
+                        .error("Bad Request")
+                        .message(msg)
+                        .path(req.getRequestURI())
+                        .build()
+        );
+    }
 
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(BAD_REQUEST, detail);
-        pd.setType(URI.create("validation-error"));
-        pd.setTitle("Bad Request");
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest req) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                ErrorResponse.builder()
+                        .status(500)
+                        .error("Internal Server Error")
+                        .message(ex.getMessage())
+                        .path(req.getRequestURI())
+                        .build()
+        );
+    }
+    @ExceptionHandler(com.artur.java.spacecatsmarket.external.RatesClient.RatesClientException.class)
+    public ResponseEntity<ErrorResponse> handleRates(
+            com.artur.java.spacecatsmarket.external.RatesClient.RatesClientException ex,
+            HttpServletRequest req) {
 
-        String path = request.getDescription(false).replace("uri=", "");
-        pd.setProperty("status", 400);
-        pd.setProperty("error", "Bad Request");
-        pd.setProperty("message", detail);
-        pd.setProperty("path", path);
-        pd.setProperty("violations", vs);
-
-        return ResponseEntity.status(BAD_REQUEST).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(pd);
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(
+                ErrorResponse.builder()
+                        .status(502)
+                        .error("Bad Gateway")
+                        .message(ex.getMessage())
+                        .path(req.getRequestURI())
+                        .build()
+        );
     }
 }

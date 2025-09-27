@@ -55,17 +55,14 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Product" }
         "400":
-          description: Validation error (RFC 9457)
+          description: Validation error
           content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
               examples:
                 invalidPrice:
                   value:
-                    type: "validation-error"
-                    title: "Bad Request"
                     status: 400
-                    detail: "Field 'price' Price must be greater than 0"
                     error: "Bad Request"
                     message: "Field 'price' Price must be greater than 0"
                     path: "/api/products"
@@ -85,17 +82,14 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Product" }
         "404":
-          description: Not found (RFC 9457)
+          description: Not found
           content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
               examples:
                 notFound:
                   value:
-                    type: "product-not-found"
-                    title: "Product Not Found"
                     status: 404
-                    detail: "Product 123e4567-e89b-12d3-a456-426614174000 not found"
                     error: "Not Found"
                     message: "Product 123e4567-e89b-12d3-a456-426614174000 not found"
                     path: "/api/products/123e4567-e89b-12d3-a456-426614174000"
@@ -119,15 +113,15 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Product" }
         "400":
-          description: Validation error (RFC 9457)
+          description: Validation error
           content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
         "404":
-          description: Not found (RFC 9457)
+          description: Not found
           content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
     delete:
       tags: [Products]
       summary: Delete product
@@ -140,10 +134,10 @@ paths:
         "204":
           description: No Content
         "404":
-          description: Not found (RFC 9457)
+          description: Not found
           content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
 components:
   schemas:
@@ -197,22 +191,12 @@ components:
         stock:        { type: integer, minimum: 0 }
         categoryCode: { type: string, maxLength: 32 }
 
-    Problem:
+    ErrorResponse:
       type: object
-      description: RFC 9457 Problem Details + дубль полів для автоперевірок
+      description: "Уніфікований формат помилок для лаби"
       properties:
-        type:     { type: string, format: uri, example: "validation-error" }
-        title:    { type: string, example: "Bad Request" }
-        status:   { type: integer, example: 400 }
-        detail:   { type: string, example: "Field 'price' Price must be greater than 0" }
-        instance: { type: string, format: uri, example: "/api/products" }
-        error:    { type: string, example: "Bad Request" }
-        message:  { type: string, example: "Field 'price' Price must be greater than 0" }
-        path:     { type: string, example: "/api/products" }
-        violations:
-          type: array
-          items:
-            type: object
-            properties:
-              fieldName: { type: string, example: "price" }
-              reason:    { type: string, example: "Price must be greater than 0" }
+        status:  { type: integer, example: 400 }
+        error:   { type: string,  example: "Bad Request" }
+        message: { type: string,  example: "Field 'price' Price must be greater than 0" }
+        path:    { type: string,  example: "/api/products" }
+      required: [status, error, message, path]
