@@ -1,5 +1,5 @@
 {
-  "request": { "method": "GET", "urlPathPattern": "/api/rates/USD" },
+  "request": { "method": "GET", "urlPathPattern": "/api/v1/rates/EUR" },
   "response": {
     "status": 200,
     "headers": { "Content-Type": "application/json" },

@@ -17,7 +17,7 @@ public class RatesClient {
     public RateResponse getRate(String currency) {
         log.debug("Calling 3rd-party Rates for {}", currency);
         return ratesRestClient.get()
-                .uri("/api/rates/{code}", currency)
+                .uri("/rates/{code}", currency)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
                     throw new RatesClientException("Unknown currency in 3rd-party: " + currency);
@@ -28,7 +28,6 @@ public class RatesClient {
                 .body(RateResponse.class);
     }
 
-    /** Runtime виняток — перехопимо глобальним хендлером і віддамо наш ErrorResponse */
     public static class RatesClientException extends RuntimeException {
         public RatesClientException(String message) { super(message); }
     }

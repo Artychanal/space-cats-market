@@ -10,9 +10,9 @@ import java.util.UUID;
 public interface ProductMapper {
 
     @Mapping(target="id", expression = "java(java.util.UUID.randomUUID())")
-    Product toEntity(ProductRequestDto dto);
+    Product toProduct(ProductRequestDto dto);
 
-    ProductResponseDto toDto(Product entity);
+    ProductResponseDto toProductDto(Product entity);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntity(@MappingTarget Product target, ProductUpdateDto dto);
