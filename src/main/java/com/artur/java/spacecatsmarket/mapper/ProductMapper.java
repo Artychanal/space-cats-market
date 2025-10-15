@@ -15,7 +15,7 @@ public interface ProductMapper {
     ProductResponseDto toProductDto(Product entity);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateEntity(@MappingTarget Product target, ProductUpdateDto dto);
+    void merge(@MappingTarget Product target, ProductUpdateDto dto);
 
     default Product withId(Product p, UUID id){ p.setId(id); return p; }
 }

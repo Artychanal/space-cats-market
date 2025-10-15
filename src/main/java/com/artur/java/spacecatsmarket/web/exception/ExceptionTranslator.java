@@ -1,5 +1,6 @@
 package com.artur.java.spacecatsmarket.web.exception;
 
+import com.artur.java.spacecatsmarket.external.exception.RateServiceException;
 import com.artur.java.spacecatsmarket.service.exception.ProductNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -7,8 +8,6 @@ import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-
-import java.util.stream.Collectors;
 
 @Slf4j
 @ControllerAdvice
@@ -75,9 +74,9 @@ public class ExceptionTranslator {
                         .build()
         );
     }
-    @ExceptionHandler(com.artur.java.spacecatsmarket.external.RatesClient.RatesClientException.class)
+    @ExceptionHandler(RateServiceException.class)
     public ResponseEntity<ErrorResponse> handleRates(
-            com.artur.java.spacecatsmarket.external.RatesClient.RatesClientException ex,
+            RateServiceException ex,
             HttpServletRequest req) {
         log.error("RatesClient failure at {} -> {}", req.getRequestURI(), ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(

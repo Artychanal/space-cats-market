@@ -32,7 +32,7 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponseDto> get(@PathVariable UUID id) {
         log.debug("GET /api/v1/products/{}", id);
-        return ResponseEntity.ok(productService.get(id));
+        return ResponseEntity.ok(productService.getProduct(id));
     }
 
     @GetMapping
@@ -42,14 +42,14 @@ public class ProductController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponseDto> update(@PathVariable UUID id, @Valid @RequestBody ProductUpdateDto request) {
-        return ResponseEntity.ok(productService.update(id, request));
+        return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         log.info("DELETE /api/v1/products/{}", id);
-        productService.delete(id);
+        productService.deleteProductById(id);
         return ResponseEntity.noContent().build();
     }
 }

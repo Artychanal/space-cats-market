@@ -7,8 +7,8 @@ import java.util.*;
 
 public interface ProductService {
     ProductResponseDto createProduct(ProductRequestDto request);
-    ProductResponseDto get(UUID id);
+    ProductResponseDto getProduct(UUID id);
     Page<ProductResponseDto> getAllProducts(Pageable pageable);
-    ProductResponseDto update(UUID id, ProductUpdateDto request);
-    void delete(UUID id);
+    ProductResponseDto updateProduct(UUID id, ProductUpdateDto request);
+    void deleteProductById(UUID id);
 }
