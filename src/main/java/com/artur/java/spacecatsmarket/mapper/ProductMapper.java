@@ -4,8 +4,6 @@ import com.artur.java.spacecatsmarket.domain.Product;
 import com.artur.java.spacecatsmarket.dto.*;
 import org.mapstruct.*;
 
-import java.util.UUID;
-
 @Mapper(config = CommonMappers.class)
 public interface ProductMapper {
 
@@ -15,7 +13,6 @@ public interface ProductMapper {
     ProductResponseDto toProductDto(Product entity);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
     void merge(@MappingTarget Product target, ProductUpdateDto dto);
-
-    default Product withId(Product p, UUID id){ p.setId(id); return p; }
 }

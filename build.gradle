@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.4'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
 }
 
 group = 'com.artur.java'
@@ -26,7 +27,14 @@ repositories {
 ext {
     mapstructVersion = '1.6.2'
     lombokVersion = '1.18.34'
+    minimumCoveragePerFile = 0.0
+    filesExcludedFromCoverage = [
+            "**/config/*Configuration.*"
+    ]
 }
+
+apply from: "${rootProject.projectDir}/gradle/test.gradle"
+apply from: "${rootProject.projectDir}/gradle/jacoco.gradle"
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -41,9 +49,4 @@ dependencies {
     annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-}
-
-
-tasks.named('test') {
-    useJUnitPlatform()
 }
