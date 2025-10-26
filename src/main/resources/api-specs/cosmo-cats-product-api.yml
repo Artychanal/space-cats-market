@@ -1,0 +1,275 @@
+openapi: 3.0.3
+info:
+  title: Cosmo Cats Intergalactic Marketplace — Product API
+  version: 1.0.0
+  description: >
+    CRUD API для управління товарами космічного маркетплейсу.
+    Валідації узгоджені з DTO (Jakarta Bean Validation + кастомні групи).
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Products
+paths:
+  /api/v1/products:
+    get:
+      tags: [Products]
+      summary: List products
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+        - in: query
+          name: sort
+          description: "Sorting, e.g. sort=name,asc&sort=price,desc"
+          schema: { type: string }
+          explode: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Product" }
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              example:
+                status: 500
+                error: "Internal Server Error"
+                message: "Unexpected error occurred"
+                path: "/api/v1/products"
+    post:
+      tags: [Products]
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductCreate" }
+            examples:
+              valid:
+                value:
+                  name: "Galaxy Comet Milk"
+                  description: "Ultra-fresh milk collected from comet pastures."
+                  price: 12.49
+                  currency: "USD"
+                  stock: 50
+                  categoryCode: "FOOD"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              examples:
+                invalidPrice:
+                  value:
+                    status: 400
+                    error: "Bad Request"
+                    message: "Validation failed"
+                    path: "/api/v1/products"
+                    errors:
+                      - field: "price"
+                        message: "Price must be greater than 0"
+                      - field: "currency"
+                        message: "Currency must match pattern ^[A-Z]{3}$"
+        "409":
+          description: Conflict — product with same unique attribute already exists
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              example:
+                status: 409
+                error: "Conflict"
+                message: "Product with name 'Nebula Star Yarn' already exists"
+                path: "/api/v1/products"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              example:
+                status: 500
+                error: "Internal Server Error"
+                message: "Unexpected error occurred"
+                path: "/api/v1/products"
+  /api/v1/products/{id}:
+    get:
+      tags: [Products]
+      summary: Get product by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              examples:
+                notFound:
+                  value:
+                    status: 404
+                    error: "Not Found"
+                    message: "Product 123e4567-e89b-12d3-a456-426614174000 not found"
+                    path: "/api/products/123e4567-e89b-12d3-a456-426614174000"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    put:
+      tags: [Products]
+      summary: Update product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              example:
+                status: 400
+                error: "Bad Request"
+                message: "Validation failed"
+                path: "/api/v1/products/123e4567-e89b-12d3-a456-426614174000"
+                errors:
+                  - field: "price"
+                    message: "Price must be greater than 0"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "409":
+          description: Conflict — updating to a value that violates uniqueness
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              example:
+                status: 409
+                error: "Conflict"
+                message: "Product with name 'Nebula Star Yarn' already exists"
+                path: "/api/v1/products/123e4567-e89b-12d3-a456-426614174000"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    delete:
+      tags: [Products]
+      summary: Delete product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:            { type: string, format: uuid }
+        name:          { type: string, minLength: 1, maxLength: 120 }
+        description:   { type: string, minLength: 1, maxLength: 2000 }
+        price:         { type: number, format: double, minimum: 0.01 }
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: "3-letter ISO 4217 (extended validation: USD/EUR/UAH)"
+        stock:         { type: integer, minimum: 0 }
+        categoryCode:  { type: string, maxLength: 32 }
+      required: [id, name, description, price, currency, stock]
+      example:
+        id: "9f2f3d3a-bb4a-4a7e-9d91-8a6d5b1a2c33"
+        name: "Nebula Star Yarn"
+        description: "Antigravity yarn ball woven from nebula threads."
+        price: 19.99
+        currency: "EUR"
+        stock: 42
+        categoryCode: "GEAR"
+
+    ProductCreate:
+      type: object
+      properties:
+        name:         { type: string, minLength: 1, maxLength: 120 }
+        description:  { type: string, minLength: 1, maxLength: 2000 }
+        price:        { type: number, format: double, minimum: 0.01 }
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: "3-letter ISO 4217 (extended validation: USD/EUR/UAH)"
+        stock:        { type: integer, minimum: 0 }
+        categoryCode: { type: string, maxLength: 32 }
+      required: [name, description, price, currency, stock]
+
+    ProductUpdate:
+      type: object
+      properties:
+        name:         { type: string, minLength: 1, maxLength: 120 }
+        description:  { type: string, minLength: 1, maxLength: 2000 }
+        price:        { type: number, format: double, minimum: 0.01 }
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: "3-letter ISO 4217 (extended validation: USD/EUR/UAH)"
+        stock:        { type: integer, minimum: 0 }
+        categoryCode: { type: string, maxLength: 32 }
+
+    ErrorResponse:
+      type: object
+      description: "Unificated format of errors for lab"
+      properties:
+        status:  { type: integer, example: 400 }
+        error:   { type: string,  example: "Bad Request" }
+        message: { type: string,  example: "Validation failed" }
+        path:    { type: string,  example: "/api/v1/products" }
+        errors:
+          type: array
+          description: "List of field-level validation errors"
+          items:
+            type: object
+            properties:
+              field: { type: string, example: "price" }
+              message: { type: string, example: "Price must be greater than 0" }
+      required: [status, error, message, path]
