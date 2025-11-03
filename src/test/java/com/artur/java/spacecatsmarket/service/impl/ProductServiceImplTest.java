@@ -1,45 +1,31 @@
 package com.artur.java.spacecatsmarket.service.impl;
 
-import com.artur.java.spacecatsmarket.domain.Product;
 import com.artur.java.spacecatsmarket.dto.ProductRequestDto;
 import com.artur.java.spacecatsmarket.dto.ProductResponseDto;
 import com.artur.java.spacecatsmarket.dto.ProductUpdateDto;
 import com.artur.java.spacecatsmarket.mapper.ProductMapper;
+import com.artur.java.spacecatsmarket.mapper.ProductMapperImpl;
 import com.artur.java.spacecatsmarket.service.exception.DuplicateProductException;
 import com.artur.java.spacecatsmarket.service.exception.ProductNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class ProductServiceImplTest {
 
-    @Mock
     private ProductMapper mapper;
-
-    @InjectMocks
     private ProductServiceImpl productService;
-
-    private Product product;
     private ProductRequestDto requestDto;
-    private ProductResponseDto responseDto;
-    private UUID productId;
 
     @BeforeEach
     void setUp() {
-        productId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        mapper = new ProductMapperImpl();
+        productService = new ProductServiceImpl(mapper);
 
         requestDto = ProductRequestDto.builder()
                 .name("Space Catnip")
@@ -49,38 +35,19 @@ class ProductServiceImplTest {
                 .stock(100)
                 .categoryCode("TREATS")
                 .build();
-
-        product = new Product();
-        product.setId(productId);
-        product.setName("Space Catnip");
-        product.setPrice(BigDecimal.TEN);
-        product.setStock(100);
-
-        responseDto = ProductResponseDto.builder()
-                .id(productId)
-                .name("Space Catnip")
-                .price(BigDecimal.TEN)
-                .stock(100)
-                .description("High-quality catnip from the Andromeda galaxy.")
-                .currency("USD")
-                .categoryCode("TREATS")
-                .build();
     }
 
     @Test
     @DisplayName("createProduct: Should save product when name is unique")
     void createProduct_shouldSaveProduct_whenNameIsUnique() {
-        when(mapper.toProduct(any(ProductRequestDto.class))).thenReturn(product);
-        when(mapper.toProductDto(any(Product.class))).thenReturn(responseDto);
-
         ProductResponseDto result = productService.createProduct(requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("Space Catnip");
-        assertThat(result.getId()).isEqualTo(productId);
+        assertThat(result.getId()).isNotNull();
 
-        verify(mapper, times(1)).toProduct(requestDto);
-        verify(mapper, times(1)).toProductDto(product);
+        ProductResponseDto fromStorage = productService.getProduct(result.getId());
+        assertThat(fromStorage.getName()).isEqualTo("Space Catnip");
     }
 
     @Test
@@ -94,38 +61,22 @@ class ProductServiceImplTest {
                 .stock(1)
                 .build();
 
-        when(mapper.toProduct(any(ProductRequestDto.class))).thenReturn(product);
-        when(mapper.toProductDto(any(Product.class))).thenReturn(responseDto);
         productService.createProduct(requestDto);
 
-        reset(mapper);
-
-        assertThatThrownBy(() -> {
-            productService.createProduct(duplicateRequest);
-        })
+        assertThatThrownBy(() -> productService.createProduct(duplicateRequest))
                 .isInstanceOf(DuplicateProductException.class)
                 .hasMessageContaining("Product with name 'Space Catnip' already exists");
-
-        verify(mapper, never()).toProduct(any());
-        verify(mapper, never()).toProductDto(any());
     }
 
     @Test
     @DisplayName("getProduct: Should return product when it exists")
     void getProduct_shouldReturnProduct_whenExists() {
-        when(mapper.toProduct(any(ProductRequestDto.class))).thenReturn(product);
-        when(mapper.toProductDto(any(Product.class))).thenReturn(responseDto);
-        productService.createProduct(requestDto);
-
-        reset(mapper);
-
-        when(mapper.toProductDto(product)).thenReturn(responseDto);
-
-        ProductResponseDto result = productService.getProduct(productId);
+        ProductResponseDto created = productService.createProduct(requestDto);
+        ProductResponseDto result = productService.getProduct(created.getId());
 
         assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(productId);
-        verify(mapper, times(1)).toProductDto(product);
+        assertThat(result.getId()).isEqualTo(created.getId());
+        assertThat(result.getName()).isEqualTo(requestDto.getName());
     }
 
     @Test
@@ -143,19 +94,14 @@ class ProductServiceImplTest {
     @Test
     @DisplayName("updateProduct: Should update product when it exists and name is unique")
     void updateProduct_shouldUpdateProduct_whenExistsAndNameIsUnique() {
-        when(mapper.toProduct(any(ProductRequestDto.class))).thenReturn(product);
-        when(mapper.toProductDto(any(Product.class))).thenReturn(responseDto);
-        productService.createProduct(requestDto);
-
-        reset(mapper);
-
+        ProductResponseDto created = productService.createProduct(requestDto);
         ProductUpdateDto updateDto = ProductUpdateDto.builder()
                 .name("New Space Catnip")
                 .price(BigDecimal.valueOf(20))
                 .build();
 
         ProductResponseDto updatedResponseDto = ProductResponseDto.builder()
-                .id(productId)
+                .id(created.getId())
                 .name("New Space Catnip")
                 .price(BigDecimal.valueOf(20))
                 .stock(100)
@@ -164,17 +110,15 @@ class ProductServiceImplTest {
                 .categoryCode("TREATS")
                 .build();
 
-        doNothing().when(mapper).merge(any(Product.class), any(ProductUpdateDto.class));
-        when(mapper.toProductDto(any(Product.class))).thenReturn(updatedResponseDto);
-
-        ProductResponseDto result = productService.updateProduct(productId, updateDto);
+        ProductResponseDto result = productService.updateProduct(created.getId(), updateDto);
 
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("New Space Catnip");
-        assertThat(result.getPrice()).isEqualTo(BigDecimal.valueOf(20));
+        assertThat(result.getName()).isEqualTo(updatedResponseDto.getName());
+        assertThat(result.getPrice()).isEqualTo(updatedResponseDto.getPrice());
 
-        verify(mapper, times(1)).merge(product, updateDto);
-        verify(mapper, times(1)).toProductDto(product);
+        ProductResponseDto persisted = productService.getProduct(created.getId());
+        assertThat(persisted.getName()).isEqualTo("New Space Catnip");
+        assertThat(persisted.getPrice()).isEqualTo(BigDecimal.valueOf(20));
     }
 
     @Test
@@ -186,22 +130,15 @@ class ProductServiceImplTest {
                 .name("Doesn't matter")
                 .build();
 
-        assertThatThrownBy(() -> {
-            productService.updateProduct(nonExistentId, updateDto);
-        })
+        assertThatThrownBy(() -> productService.updateProduct(nonExistentId, updateDto))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessageContaining("Product %s not found".formatted(nonExistentId));
-
-        verify(mapper, never()).merge(any(), any());
-        verify(mapper, never()).toProductDto(any());
     }
 
     @Test
     @DisplayName("updateProduct: Should throw DuplicateProductException when new name is already taken")
     void updateProduct_shouldThrowException_whenNameIsDuplicate() {
-        when(mapper.toProduct(requestDto)).thenReturn(product);
-        when(mapper.toProductDto(product)).thenReturn(responseDto);
-        productService.createProduct(requestDto);
+        ProductResponseDto created = productService.createProduct(requestDto);
 
         ProductRequestDto requestDto2 = ProductRequestDto.builder()
                 .name("Other Catnip")
@@ -211,20 +148,13 @@ class ProductServiceImplTest {
                 .stock(1)
                 .build();
 
-        Product product2 = new Product();
-        product2.setId(UUID.randomUUID());
-        product2.setName("Other Catnip");
-
-        when(mapper.toProduct(requestDto2)).thenReturn(product2);
         productService.createProduct(requestDto2);
 
         ProductUpdateDto updateDto = ProductUpdateDto.builder()
                 .name("Other Catnip")
                 .build();
 
-        assertThatThrownBy(() -> {
-            productService.updateProduct(productId, updateDto);
-        })
+        assertThatThrownBy(() -> productService.updateProduct(created.getId(), updateDto))
                 .isInstanceOf(DuplicateProductException.class)
                 .hasMessageContaining("Product with name 'Other Catnip' already exists");
     }
@@ -232,14 +162,11 @@ class ProductServiceImplTest {
     @Test
     @DisplayName("deleteProductById: Should successfully delete an existing product")
     void deleteProductById_shouldDeleteProduct_whenExists() {
-        when(mapper.toProduct(any(ProductRequestDto.class))).thenReturn(product);
-        productService.createProduct(requestDto);
+        ProductResponseDto created = productService.createProduct(requestDto);
 
-        productService.deleteProductById(productId);
+        productService.deleteProductById(created.getId());
 
-        assertThatThrownBy(() -> {
-            productService.getProduct(productId);
-        })
+        assertThatThrownBy(() -> productService.getProduct(created.getId()))
                 .isInstanceOf(ProductNotFoundException.class);
     }
 
@@ -248,8 +175,6 @@ class ProductServiceImplTest {
     void deleteProductById_shouldDoNothing_whenNotExists() {
         UUID nonExistentId = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> {
-            productService.deleteProductById(nonExistentId);
-        });
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> productService.deleteProductById(nonExistentId));
     }
 }
