@@ -1,5 +1,4 @@
 package com.artur.java.spacecatsmarket.service;
-
 import com.artur.java.spacecatsmarket.service.exception.FeatureNotAvailableException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,8 +13,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-        "feature.cosmoCats.enabled=true",
-        "feature.kittyProducts.enabled=false"
+        "feature.cosmo-cats-enabled=true",
+        "feature.kitty-products-enabled=false"
 })
 class CosmoCatServiceTest {
 

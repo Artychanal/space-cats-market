@@ -12,7 +12,5 @@ clients:
     connect-timeout-ms: 1000
     read-timeout-ms: 1500
 feature:
-  cosmoCats:
-    enabled: true
-  kittyProducts:
-    enabled: false
+  cosmo-cats-enabled: true
+  kitty-products-enabled: false

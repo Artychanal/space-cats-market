@@ -14,8 +14,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-        "feature.cosmoCats.enabled=false",
-        "feature.kittyProducts.enabled=true"
+        "feature.cosmo-cats-enabled=false",
+        "feature.kitty-products-enabled=true"
 })
 class CosmoCatServiceFeatureDisabledTest {
 
@@ -35,7 +35,6 @@ class CosmoCatServiceFeatureDisabledTest {
     void getKittyProducts_shouldReturnProducts_whenFeatureEnabled() {
         List<String> products = cosmoCatService.getKittyProducts();
 
-        // Then
         assertThat(products).isNotEmpty();
         assertThat(products).contains("Space Catnip", "Cosmic Scratching Post");
     }
