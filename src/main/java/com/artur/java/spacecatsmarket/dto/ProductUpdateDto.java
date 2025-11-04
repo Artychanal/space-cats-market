@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 @Jacksonized
 @GroupSequence({ProductUpdateDto.class, ExtendedValidation.class})
 public class ProductUpdateDto {
-    @Size(max = 120)
+    @Size(max = 120, message = "Name cannot exceed 120 characters")
     @CosmicWordCheck(groups = ExtendedValidation.class)
     String name;
     @Size(max = 2000)
