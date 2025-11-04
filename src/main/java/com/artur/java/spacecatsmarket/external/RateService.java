@@ -4,9 +4,9 @@ import com.artur.java.spacecatsmarket.external.dto.RateResponse;
 import com.artur.java.spacecatsmarket.external.exception.RateServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.client.RestClientResponseException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 @Slf4j
 @Service
@@ -22,8 +22,8 @@ public class RateService {
                     .uri("/rates/{code}", currency)
                     .retrieve()
                     .body(RateResponse.class);
-        } catch (RestClientResponseException e) {
-            log.error("Error fetching rates for currency {}: Status code {}, Body {}", currency, e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (RestClientException e) {
+            log.error("Error fetching rates for currency {}: {}", currency, e.getMessage(), e);
             throw new RateServiceException("Failed to retrieve currency rate for: " + currency, e);
         }
     }
