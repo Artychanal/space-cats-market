@@ -37,7 +37,7 @@ public class ExceptionTranslator {
                 ErrorResponse.builder()
                         .status(400)
                         .error("Bad Request")
-                        .message("Validaton failed")
+                        .message("Validation failed")
                         .path(req.getRequestURI())
                         .errors(fieldErrors)
                         .build()
