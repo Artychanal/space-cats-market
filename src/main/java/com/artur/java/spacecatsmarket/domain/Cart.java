@@ -17,7 +17,7 @@ public class Cart {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Item {
-        private java.util.UUID productId;
+        private Long productId;
         private int qty;
     }
 }

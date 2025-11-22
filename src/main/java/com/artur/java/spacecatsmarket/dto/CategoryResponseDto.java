@@ -4,17 +4,11 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
-import java.math.BigDecimal;
-
 @Value
 @Builder(toBuilder = true)
 @Jacksonized
-public class ProductResponseDto {
+public class CategoryResponseDto {
     Long id;
-    String name;
-    String description;
-    BigDecimal price;
-    String currency;
-    Integer stock;
-    String categoryCode;
+    String code;
+    String title;
 }

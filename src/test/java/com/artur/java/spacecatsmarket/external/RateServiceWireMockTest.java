@@ -1,5 +1,7 @@
 package com.artur.java.spacecatsmarket.external;
 
+import com.artur.java.spacecatsmarket.SpaceCatsMarketApplication;
+import com.artur.java.spacecatsmarket.config.PostgresTestConfig;
 import com.artur.java.spacecatsmarket.external.dto.RateResponse;
 import com.artur.java.spacecatsmarket.external.exception.RateServiceException;
 import org.junit.jupiter.api.DisplayName;
@@ -14,11 +16,13 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest(properties = {
-        "clients.rates.base-url=http://localhost:${wiremock.server.port}/api/v1",
-        "clients.rates.connect-timeout-ms=1000",
-        "clients.rates.read-timeout-ms=1500"
-})
+@SpringBootTest(
+        classes = {SpaceCatsMarketApplication.class, PostgresTestConfig.class},
+        properties = {
+                "clients.rates.base-url=http://localhost:${wiremock.server.port}/api/v1",
+                "clients.rates.connect-timeout-ms=1000",
+                "clients.rates.read-timeout-ms=1500"
+        })
 @AutoConfigureWireMock(port = 0)
 class RateServiceWireMockTest {
 

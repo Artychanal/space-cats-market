@@ -25,6 +25,6 @@ public class ProductUpdateDto {
     String currency;
     @Min(0)
     Integer stock;
-    @Size(max = 32)
+    @Size(max = 64)
     String categoryCode;
 }

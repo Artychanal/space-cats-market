@@ -1,24 +1,42 @@
 package com.artur.java.spacecatsmarket.domain;
 
+import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NaturalId;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-@Data
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(name = "orders",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_order_number", columnNames = "order_number"),
+                @UniqueConstraint(name = "uk_order_customer_email", columnNames = "customer_email")
+        })
 public class Order {
-    private String number;
-    private OffsetDateTime createdAt;
-    private List<OrderLine> lines = new ArrayList<>();
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class OrderLine {
-        private java.util.UUID productId;
-        private int qty;
-        private java.math.BigDecimal priceAtPurchase;
-    }
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_seq")
+    @SequenceGenerator(name = "order_seq", sequenceName = "order_seq", allocationSize = 1)
+    private Long id;
+
+    @NaturalId
+    @Column(name = "order_number", nullable = false, length = 64, updatable = false)
+    private String number;
+
+    @Column(name = "customer_email", nullable = false, length = 255)
+    private String customerEmail;
+
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<OrderLine> lines = new ArrayList<>();
 }

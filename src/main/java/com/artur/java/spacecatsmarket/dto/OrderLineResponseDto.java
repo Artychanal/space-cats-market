@@ -9,12 +9,8 @@ import java.math.BigDecimal;
 @Value
 @Builder(toBuilder = true)
 @Jacksonized
-public class ProductResponseDto {
-    Long id;
-    String name;
-    String description;
-    BigDecimal price;
-    String currency;
-    Integer stock;
-    String categoryCode;
+public class OrderLineResponseDto {
+    Long productId;
+    int qty;
+    BigDecimal priceAtPurchase;
 }
