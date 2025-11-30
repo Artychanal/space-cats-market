@@ -11,7 +11,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.*;
 
 @Slf4j
 @RestController
@@ -30,7 +29,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponseDto> get(@PathVariable UUID id) {
+    public ResponseEntity<ProductResponseDto> get(@PathVariable Long id) {
         log.debug("GET /api/v1/products/{}", id);
         return ResponseEntity.ok(productService.getProduct(id));
     }
@@ -41,13 +40,13 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponseDto> update(@PathVariable UUID id, @Valid @RequestBody ProductUpdateDto request) {
+    public ResponseEntity<ProductResponseDto> update(@PathVariable Long id, @Valid @RequestBody ProductUpdateDto request) {
         return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/v1/products/{}", id);
         productService.deleteProductById(id);
         return ResponseEntity.noContent().build();

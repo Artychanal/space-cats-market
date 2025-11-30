@@ -7,7 +7,7 @@ import org.mapstruct.*;
 @Mapper(config = CommonMappers.class)
 public interface ProductMapper {
 
-    @Mapping(target="id", expression = "java(java.util.UUID.randomUUID())")
+    @Mapping(target = "id", ignore = true)
     Product toProduct(ProductRequestDto dto);
 
     ProductResponseDto toProductDto(Product entity);

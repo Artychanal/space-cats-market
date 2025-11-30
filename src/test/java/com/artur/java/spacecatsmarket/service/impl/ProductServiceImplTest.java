@@ -1,9 +1,12 @@
 package com.artur.java.spacecatsmarket.service.impl;
 
-import com.artur.java.spacecatsmarket.config.MappersTestConfig;
+import com.artur.java.spacecatsmarket.SpaceCatsMarketApplication;
+import com.artur.java.spacecatsmarket.config.PostgresTestConfig;
+import com.artur.java.spacecatsmarket.dto.CategoryRequestDto;
 import com.artur.java.spacecatsmarket.dto.ProductRequestDto;
 import com.artur.java.spacecatsmarket.dto.ProductResponseDto;
 import com.artur.java.spacecatsmarket.dto.ProductUpdateDto;
+import com.artur.java.spacecatsmarket.service.CategoryService;
 import com.artur.java.spacecatsmarket.service.ProductService;
 import com.artur.java.spacecatsmarket.service.exception.DuplicateProductException;
 import com.artur.java.spacecatsmarket.service.exception.ProductNotFoundException;
@@ -15,23 +18,30 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 
-@SpringBootTest(classes = {ProductServiceImpl.class, MappersTestConfig.class})
+@SpringBootTest(classes = {SpaceCatsMarketApplication.class, PostgresTestConfig.class})
 @DisplayName("Product Service Tests")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class ProductServiceImplTest {
     @Autowired
     private ProductService productService;
 
+    @Autowired
+    private CategoryService categoryService;
+
     private ProductRequestDto requestDto;
 
     @BeforeEach
     void setUp() {
+        categoryService.createCategory(CategoryRequestDto.builder()
+                .code("TREATS")
+                .title("Space Treats")
+                .build());
+
         requestDto = ProductRequestDto.builder()
                 .name("Space Catnip")
                 .description("High-quality catnip from the Andromeda galaxy.")
@@ -64,6 +74,7 @@ class ProductServiceImplTest {
                 .price(BigDecimal.ONE)
                 .currency("USD")
                 .stock(1)
+                .categoryCode("TREATS")
                 .build();
 
         productService.createProduct(requestDto);
@@ -88,7 +99,7 @@ class ProductServiceImplTest {
     @Test
     @DisplayName("getProduct: Should throw ProductNotFoundException when product does not exist")
     void getProduct_shouldThrowException_whenNotExists() {
-        UUID nonExistentId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        Long nonExistentId = 999L;
 
         assertThatThrownBy(() -> productService.getProduct(nonExistentId))
                 .isInstanceOf(ProductNotFoundException.class)
@@ -120,7 +131,7 @@ class ProductServiceImplTest {
     @Test
     @DisplayName("updateProduct: Should throw ProductNotFoundException when product does not exist")
     void updateProduct_shouldThrowException_whenProductNotExists() {
-        UUID nonExistentId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        Long nonExistentId = 999L;
         ProductUpdateDto updateDto = ProductUpdateDto.builder()
                 .name("Doesn't matter")
                 .build();
@@ -141,6 +152,7 @@ class ProductServiceImplTest {
                 .price(BigDecimal.ONE)
                 .currency("USD")
                 .stock(1)
+                .categoryCode("TREATS")
                 .build();
 
         productService.createProduct(requestDto2);
@@ -168,7 +180,7 @@ class ProductServiceImplTest {
     @Test
     @DisplayName("deleteProductById: Should complete silently when product does not exist")
     void deleteProductById_shouldDoNothing_whenNotExists() {
-        UUID nonExistentId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        Long nonExistentId = 999L;
 
         org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
                 productService.deleteProductById(nonExistentId)

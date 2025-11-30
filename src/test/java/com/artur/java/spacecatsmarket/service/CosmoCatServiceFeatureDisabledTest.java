@@ -1,5 +1,7 @@
 package com.artur.java.spacecatsmarket.service;
 
+import com.artur.java.spacecatsmarket.SpaceCatsMarketApplication;
+import com.artur.java.spacecatsmarket.config.PostgresTestConfig;
 import com.artur.java.spacecatsmarket.service.exception.FeatureNotAvailableException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,7 +14,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest
+@SpringBootTest(classes = {SpaceCatsMarketApplication.class, PostgresTestConfig.class})
 @TestPropertySource(properties = {
         "feature.cosmo-cats-enabled=false",
         "feature.kitty-products-enabled=true"

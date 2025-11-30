@@ -1,15 +1,20 @@
 package com.artur.java.spacecatsmarket.domain;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
-@Data
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Product {
-    private UUID id;
+    private Long id;
     private String name;
     private String description;
     private BigDecimal price;

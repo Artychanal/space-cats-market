@@ -6,13 +6,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Category {
+public class OrderLine {
     private Long id;
-    private String code;
-    private String title;
+    private Long productId;
+    private int qty;
+    private BigDecimal priceAtPurchase;
 }

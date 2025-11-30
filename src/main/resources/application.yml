@@ -1,6 +1,18 @@
 spring:
   application:
     name: cosmo-cats
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:cosmo_cats}
+    username: ${DB_USERNAME:cosmo}
+    password: ${DB_PASSWORD:cosmo}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yml
 logging:
   level:
     root: INFO

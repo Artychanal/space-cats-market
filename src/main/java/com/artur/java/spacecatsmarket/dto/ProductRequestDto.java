@@ -35,6 +35,7 @@ public class ProductRequestDto {
     @Min(0)
     Integer stock;
 
-    @Size(max = 32)
+    @NotBlank(message = "Category code is mandatory")
+    @Size(max = 64)
     String categoryCode;
 }

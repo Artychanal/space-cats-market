@@ -1,8 +1,9 @@
 package com.artur.java.spacecatsmarket.web;
 
-import com.artur.java.spacecatsmarket.dto.ProductRequestDto;
-import com.artur.java.spacecatsmarket.dto.ProductResponseDto;
-import com.artur.java.spacecatsmarket.dto.ProductUpdateDto;
+import com.artur.java.spacecatsmarket.SpaceCatsMarketApplication;
+import com.artur.java.spacecatsmarket.config.PostgresTestConfig;
+import com.artur.java.spacecatsmarket.dto.*;
+import com.artur.java.spacecatsmarket.service.CategoryService;
 import com.artur.java.spacecatsmarket.service.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,14 +18,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "clients.rates.base-url=http://localhost/api/v1")
+@SpringBootTest(
+        classes = {SpaceCatsMarketApplication.class, PostgresTestConfig.class},
+        properties = "clients.rates.base-url=http://localhost/api/v1")
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class ProductControllerIT {
@@ -38,10 +40,18 @@ class ProductControllerIT {
     @Autowired
     private ProductService productService;
 
+    @Autowired
+    private CategoryService categoryService;
+
     private ProductRequestDto validRequest;
 
     @BeforeEach
     void setUp() {
+        categoryService.createCategory(CategoryRequestDto.builder()
+                .code("TREATS")
+                .title("Space Treats")
+                .build());
+
         validRequest = ProductRequestDto.builder()
                 .name("Star Product")
                 .description("Valid description")
@@ -122,14 +132,14 @@ class ProductControllerIT {
         mockMvc.perform(get("/api/v1/products/{id}", created.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(created.getId().toString()))
+                .andExpect(jsonPath("$.id").value(created.getId()))
                 .andExpect(jsonPath("$.name").value("Star Product"));
     }
 
     @Test
     @DisplayName("GET /api/v1/products/{id}: Should return 404 Not Found when product does not exist")
     void getProductById_shouldReturn404_whenProductNotFound() throws Exception {
-        UUID productId = UUID.randomUUID();
+        long productId = 999L;
 
         mockMvc.perform(get("/api/v1/products/{id}", productId)
                         .accept(MediaType.APPLICATION_JSON))
@@ -152,7 +162,7 @@ class ProductControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(created.getId().toString()))
+                .andExpect(jsonPath("$.id").value(created.getId()))
                 .andExpect(jsonPath("$.name").value("Nebula Updated"))
                 .andReturn();
 
@@ -188,7 +198,7 @@ class ProductControllerIT {
                 .name("Star Updated")
                 .build();
 
-        UUID productId = UUID.randomUUID();
+        long productId = 999L;
 
         mockMvc.perform(put("/api/v1/products/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)

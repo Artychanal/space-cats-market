@@ -1,167 +1,113 @@
 package com.artur.java.spacecatsmarket.service.impl;
 
 import com.artur.java.spacecatsmarket.domain.Product;
-import com.artur.java.spacecatsmarket.dto.*;
+import com.artur.java.spacecatsmarket.dto.ProductRequestDto;
+import com.artur.java.spacecatsmarket.dto.ProductResponseDto;
+import com.artur.java.spacecatsmarket.dto.ProductUpdateDto;
+import com.artur.java.spacecatsmarket.mapper.ProductEntityMapper;
 import com.artur.java.spacecatsmarket.mapper.ProductMapper;
+import com.artur.java.spacecatsmarket.persistence.entity.CategoryEntity;
+import com.artur.java.spacecatsmarket.persistence.entity.ProductEntity;
+import com.artur.java.spacecatsmarket.repository.CategoryRepository;
+import com.artur.java.spacecatsmarket.repository.ProductRepository;
 import com.artur.java.spacecatsmarket.service.ProductService;
+import com.artur.java.spacecatsmarket.service.exception.CategoryNotFoundException;
 import com.artur.java.spacecatsmarket.service.exception.DuplicateProductException;
 import com.artur.java.spacecatsmarket.service.exception.ProductNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ProductServiceImpl implements ProductService {
 
-    private final ProductMapper mapper;
-    private final Map<UUID, Product> storage = new ConcurrentHashMap<>();
-    private final Map<String, UUID> nameToIdIndex = new ConcurrentHashMap<>();
-
-    private boolean isProductExistsByName(String name, UUID excludeId) {
-        if (StringUtils.isBlank(name)) {
-            return false;
-        }
-        String key = name.trim().toLowerCase();
-        UUID existingId = nameToIdIndex.get(key);
-        return existingId != null && !existingId.equals(excludeId);
-    }
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final ProductMapper productMapper;
+    private final ProductEntityMapper productEntityMapper;
 
     @Override
     public ProductResponseDto createProduct(ProductRequestDto req) {
-        if (isProductExistsByName(req.getName(), null)) {
+        CategoryEntity category = resolveCategory(req.getCategoryCode());
+        if (productRepository.existsByNameIgnoreCaseAndCategory(req.getName(), category)) {
             throw new DuplicateProductException(
-                    "Product with name '%s' already exists".formatted(req.getName()));
+                    "Product with name '%s' already exists in category %s".formatted(
+                            req.getName(), category.getCode()));
         }
-        Product p = mapper.toProduct(req);
-        storage.put(p.getId(), p);
-        if (StringUtils.isNotBlank(p.getName())) {
-            nameToIdIndex.put(p.getName().trim().toLowerCase(), p.getId());
-        }
-        log.info("Created product id={} name={}", p.getId(), p.getName());
-        return mapper.toProductDto(p);
+        Product domain = productMapper.toProduct(req);
+        ProductEntity entity = productEntityMapper.toEntity(domain, category);
+        ProductEntity saved = productRepository.save(entity);
+        log.info("Created product id={} name={}", saved.getId(), saved.getName());
+        return productMapper.toProductDto(productEntityMapper.toDomain(saved));
     }
 
     @Override
-    public ProductResponseDto getProduct(UUID id) {
-        Product p = storage.get(id);
-        if (p == null) {
-            log.warn("Product {} not found", id);
-            throw new ProductNotFoundException("Product %s not found".formatted(id));
-        }
-        return mapper.toProductDto(p);
+    @Transactional(readOnly = true)
+    public ProductResponseDto getProduct(Long id) {
+        ProductEntity product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product %s not found".formatted(id)));
+        return productMapper.toProductDto(productEntityMapper.toDomain(product));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductResponseDto> getAllProducts(Pageable pageable) {
-        List<Product> all = new ArrayList<>(storage.values());
-
-        Comparator<Product> comparator = getCachedComparator(pageable.getSort());
-        if (comparator != null) {
-            all.sort(comparator);
-        }
-
-        long total = all.size();
-        int start = (int) Math.min(pageable.getOffset(), total);
-        int end = (int) Math.min((long) start + pageable.getPageSize(), total);
-
-        List<ProductResponseDto> content = all.subList(start, end).stream()
-                .map(mapper::toProductDto)
-                .toList();
-
-        return new PageImpl<>(content, pageable, total);
-    }
-
-    private static final Comparator<Product> NAME_COMPARATOR =
-            Comparator.comparing(p -> StringUtils.defaultString(p.getName()));
-    private static final Comparator<Product> PRICE_COMPARATOR =
-            Comparator.comparing(Product::getPrice, Comparator.nullsLast(Comparator.naturalOrder()));
-    private static final Comparator<Product> CURRENCY_COMPARATOR =
-            Comparator.comparing(p -> StringUtils.defaultString(p.getCurrency()));
-    private static final Comparator<Product> STOCK_COMPARATOR =
-            Comparator.comparing(p -> Optional.ofNullable(p.getStock()).orElse(0));
-    private static final Comparator<Product> CATEGORY_CODE_COMPARATOR =
-            Comparator.comparing(p -> StringUtils.defaultString(p.getCategoryCode()));
-    private static final Comparator<Product> ID_COMPARATOR =
-            Comparator.comparing(Product::getId);
-
-    private static final Map<String, Comparator<Product>> ASCENDING = Map.ofEntries(
-            Map.entry("name", NAME_COMPARATOR),
-            Map.entry("price", PRICE_COMPARATOR),
-            Map.entry("currency", CURRENCY_COMPARATOR),
-            Map.entry("stock", STOCK_COMPARATOR),
-            Map.entry("categoryCode", CATEGORY_CODE_COMPARATOR),
-            Map.entry("id", ID_COMPARATOR)
-    );
-
-    private static final Map<String, Comparator<Product>> DESCENDING =
-            ASCENDING.entrySet().stream()
-                    .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, e -> e.getValue().reversed()));
-
-    private static final ConcurrentMap<String, Comparator<Product>> COMPARATOR_CACHE = new ConcurrentHashMap<>();
-
-    private static Comparator<Product> getCachedComparator(Sort sort) {
-        if (sort == null || sort.isUnsorted()) return null;
-
-        String key = sort.stream()
-                .map(o -> o.getProperty() + ":" + (o.isDescending() ? "desc" : "asc"))
-                .collect(Collectors.joining(","));
-
-        return COMPARATOR_CACHE.computeIfAbsent(key, k ->
-                sort.stream()
-                        .map(o -> o.isDescending()
-                                ? DESCENDING.get(o.getProperty())
-                                : ASCENDING.get(o.getProperty()))
-                        .filter(Objects::nonNull)
-                        .reduce(Comparator::thenComparing)
-                        .orElse(null)
-        );
+        return productRepository.findAll(pageable)
+                .map(productEntityMapper::toDomain)
+                .map(productMapper::toProductDto);
     }
 
     @Override
-    public ProductResponseDto updateProduct(UUID id, ProductUpdateDto req) {
-        Product p = storage.get(id);
-        if (p == null) throw new ProductNotFoundException("Product %s not found".formatted(id));
-        if (req.getName() != null && isProductExistsByName(req.getName(), id)) {
-            throw new DuplicateProductException(
-                    "Product with name '%s' already exists".formatted(req.getName()));
+    public ProductResponseDto updateProduct(Long id, ProductUpdateDto req) {
+        ProductEntity product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product %s not found".formatted(id)));
+
+        CategoryEntity targetCategory = product.getCategory();
+        if (req.getCategoryCode() != null) {
+            targetCategory = resolveCategory(req.getCategoryCode());
         }
-        String oldNameKey = (p.getName() != null) ? p.getName().trim().toLowerCase() : null;
-        mapper.merge(p, req);
-        String newNameKey = (p.getName() != null) ? p.getName().trim().toLowerCase() : null;
-        if (!Objects.equals(oldNameKey, newNameKey)) {
-            if (oldNameKey != null) {
-                nameToIdIndex.remove(oldNameKey);
-            }
-            if (newNameKey != null) {
-                nameToIdIndex.put(newNameKey, p.getId());
+        if (req.getName() != null && targetCategory != null) {
+            boolean exists = productRepository.existsByNameIgnoreCaseAndCategoryAndIdNot(
+                    req.getName(), targetCategory, id);
+            if (exists) {
+                throw new DuplicateProductException(
+                        "Product with name '%s' already exists in category %s".formatted(
+                                req.getName(), targetCategory.getCode()));
             }
         }
+
+        Product domain = productEntityMapper.toDomain(product);
+        productMapper.merge(domain, req);
+        domain.setCategoryCode(targetCategory.getCode());
+
+        ProductEntity updated = productEntityMapper.toEntity(domain, targetCategory);
+        productEntityMapper.merge(product, updated);
+        product.setCategory(targetCategory);
+
+        ProductEntity saved = productRepository.save(product);
         log.info("Updated product id={}", id);
-        return mapper.toProductDto(p);
+        return productMapper.toProductDto(productEntityMapper.toDomain(saved));
     }
 
     @Override
-    public void deleteProductById(UUID id) {
-        Product removed = storage.remove(id);
-        if (removed == null) {
+    public void deleteProductById(Long id) {
+        if (!productRepository.existsById(id)) {
             log.warn("Delete called for non-existing product {}", id);
-        } else {
-            if (StringUtils.isNotBlank(removed.getName())) {
-                nameToIdIndex.remove(removed.getName().trim().toLowerCase());
-            }
-            log.info("Deleted product id={}", id);
+            return;
         }
+        productRepository.deleteById(id);
+        log.info("Deleted product id={}", id);
+    }
+
+    private CategoryEntity resolveCategory(String categoryCode) {
+        return categoryRepository.findByCodeIgnoreCase(categoryCode)
+                .orElseThrow(() -> new CategoryNotFoundException(
+                        "Category %s not found".formatted(categoryCode)));
     }
 }

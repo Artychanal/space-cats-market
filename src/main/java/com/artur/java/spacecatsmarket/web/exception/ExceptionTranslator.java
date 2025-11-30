@@ -1,10 +1,13 @@
 package com.artur.java.spacecatsmarket.web.exception;
 
 import com.artur.java.spacecatsmarket.external.exception.RateServiceException;
+import com.artur.java.spacecatsmarket.service.exception.CategoryNotFoundException;
+import com.artur.java.spacecatsmarket.service.exception.OrderNotFoundException;
 import com.artur.java.spacecatsmarket.service.exception.ProductNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -15,6 +18,20 @@ public class ExceptionTranslator {
 
     @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ProductNotFoundException ex, HttpServletRequest req) {
+        log.warn("NotFound at {} -> {}", req.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ErrorResponse.builder()
+                        .status(404)
+                        .error("Not Found")
+                        .message(ex.getMessage())
+                        .path(req.getRequestURI())
+                        .errors(null)
+                        .build()
+        );
+    }
+
+    @ExceptionHandler({CategoryNotFoundException.class, OrderNotFoundException.class})
+    public ResponseEntity<ErrorResponse> handleDomainNotFound(RuntimeException ex, HttpServletRequest req) {
         log.warn("NotFound at {} -> {}", req.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 ErrorResponse.builder()
@@ -94,6 +111,21 @@ public class ExceptionTranslator {
             com.artur.java.spacecatsmarket.service.exception.DuplicateProductException ex,
             HttpServletRequest req) {
         log.warn("Duplicate product conflict at {} -> {}", req.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ErrorResponse.builder()
+                        .status(409)
+                        .error("Conflict")
+                        .message(ex.getMessage())
+                        .path(req.getRequestURI())
+                        .errors(null)
+                        .build()
+        );
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(
+            DataIntegrityViolationException ex, HttpServletRequest req) {
+        log.warn("Constraint violation at {} -> {}", req.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
                 ErrorResponse.builder()
                         .status(409)
