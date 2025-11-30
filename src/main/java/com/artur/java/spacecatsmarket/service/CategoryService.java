@@ -6,6 +6,6 @@ import com.artur.java.spacecatsmarket.dto.CategoryResponseDto;
 import java.util.List;
 
 public interface CategoryService {
-    CategoryResponseDto create(CategoryRequestDto request);
+    CategoryResponseDto createCategory(CategoryRequestDto request);
     List<CategoryResponseDto> getAll();
 }

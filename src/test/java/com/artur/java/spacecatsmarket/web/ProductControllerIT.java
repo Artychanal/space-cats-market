@@ -47,7 +47,7 @@ class ProductControllerIT {
 
     @BeforeEach
     void setUp() {
-        categoryService.create(CategoryRequestDto.builder()
+        categoryService.createCategory(CategoryRequestDto.builder()
                 .code("TREATS")
                 .title("Space Treats")
                 .build());

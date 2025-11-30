@@ -1,11 +1,13 @@
 package com.artur.java.spacecatsmarket.service.impl;
 
-import com.artur.java.spacecatsmarket.domain.Category;
 import com.artur.java.spacecatsmarket.domain.Product;
 import com.artur.java.spacecatsmarket.dto.ProductRequestDto;
 import com.artur.java.spacecatsmarket.dto.ProductResponseDto;
 import com.artur.java.spacecatsmarket.dto.ProductUpdateDto;
+import com.artur.java.spacecatsmarket.mapper.ProductEntityMapper;
 import com.artur.java.spacecatsmarket.mapper.ProductMapper;
+import com.artur.java.spacecatsmarket.persistence.entity.CategoryEntity;
+import com.artur.java.spacecatsmarket.persistence.entity.ProductEntity;
 import com.artur.java.spacecatsmarket.repository.CategoryRepository;
 import com.artur.java.spacecatsmarket.repository.ProductRepository;
 import com.artur.java.spacecatsmarket.service.ProductService;
@@ -27,59 +29,70 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
-    private final ProductMapper mapper;
+    private final ProductMapper productMapper;
+    private final ProductEntityMapper productEntityMapper;
 
     @Override
     public ProductResponseDto createProduct(ProductRequestDto req) {
-        Category category = resolveCategory(req.getCategoryCode());
+        CategoryEntity category = resolveCategory(req.getCategoryCode());
         if (productRepository.existsByNameIgnoreCaseAndCategory(req.getName(), category)) {
             throw new DuplicateProductException(
                     "Product with name '%s' already exists in category %s".formatted(
                             req.getName(), category.getCode()));
         }
-        Product entity = mapper.toProduct(req);
-        entity.setCategory(category);
-        Product saved = productRepository.save(entity);
+        Product domain = productMapper.toProduct(req);
+        ProductEntity entity = productEntityMapper.toEntity(domain, category);
+        ProductEntity saved = productRepository.save(entity);
         log.info("Created product id={} name={}", saved.getId(), saved.getName());
-        return mapper.toProductDto(saved);
+        return productMapper.toProductDto(productEntityMapper.toDomain(saved));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ProductResponseDto getProduct(Long id) {
-        Product product = productRepository.findById(id)
+        ProductEntity product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product %s not found".formatted(id)));
-        return mapper.toProductDto(product);
+        return productMapper.toProductDto(productEntityMapper.toDomain(product));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponseDto> getAllProducts(Pageable pageable) {
-        return productRepository.findAll(pageable).map(mapper::toProductDto);
+        return productRepository.findAll(pageable)
+                .map(productEntityMapper::toDomain)
+                .map(productMapper::toProductDto);
     }
 
     @Override
     public ProductResponseDto updateProduct(Long id, ProductUpdateDto req) {
-        Product product = productRepository.findById(id)
+        ProductEntity product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product %s not found".formatted(id)));
 
+        CategoryEntity targetCategory = product.getCategory();
         if (req.getCategoryCode() != null) {
-            product.setCategory(resolveCategory(req.getCategoryCode()));
+            targetCategory = resolveCategory(req.getCategoryCode());
         }
-        if (req.getName() != null && product.getCategory() != null) {
+        if (req.getName() != null && targetCategory != null) {
             boolean exists = productRepository.existsByNameIgnoreCaseAndCategoryAndIdNot(
-                    req.getName(), product.getCategory(), id);
+                    req.getName(), targetCategory, id);
             if (exists) {
                 throw new DuplicateProductException(
                         "Product with name '%s' already exists in category %s".formatted(
-                                req.getName(), product.getCategory().getCode()));
+                                req.getName(), targetCategory.getCode()));
             }
         }
 
-        mapper.merge(product, req);
-        Product updated = productRepository.save(product);
+        Product domain = productEntityMapper.toDomain(product);
+        productMapper.merge(domain, req);
+        domain.setCategoryCode(targetCategory.getCode());
+
+        ProductEntity updated = productEntityMapper.toEntity(domain, targetCategory);
+        productEntityMapper.merge(product, updated);
+        product.setCategory(targetCategory);
+
+        ProductEntity saved = productRepository.save(product);
         log.info("Updated product id={}", id);
-        return mapper.toProductDto(updated);
+        return productMapper.toProductDto(productEntityMapper.toDomain(saved));
     }
 
     @Override
@@ -92,7 +105,7 @@ public class ProductServiceImpl implements ProductService {
         log.info("Deleted product id={}", id);
     }
 
-    private Category resolveCategory(String categoryCode) {
+    private CategoryEntity resolveCategory(String categoryCode) {
         return categoryRepository.findByCodeIgnoreCase(categoryCode)
                 .orElseThrow(() -> new CategoryNotFoundException(
                         "Category %s not found".formatted(categoryCode)));

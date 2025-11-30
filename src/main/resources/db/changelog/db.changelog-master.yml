@@ -6,19 +6,19 @@ databaseChangeLog:
         - createSequence:
             sequenceName: category_seq
             startValue: 1
-            incrementBy: 1
+            incrementBy: 50
         - createSequence:
             sequenceName: product_seq
             startValue: 1
-            incrementBy: 1
+            incrementBy: 50
         - createSequence:
             sequenceName: order_seq
             startValue: 1
-            incrementBy: 1
+            incrementBy: 50
         - createSequence:
             sequenceName: order_line_seq
             startValue: 1
-            incrementBy: 1
+            incrementBy: 50
         - createTable:
             tableName: categories
             columns:

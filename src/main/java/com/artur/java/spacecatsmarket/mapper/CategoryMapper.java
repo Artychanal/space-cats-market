@@ -9,7 +9,6 @@ import org.mapstruct.Mapping;
 @Mapper(config = CommonMappers.class)
 public interface CategoryMapper {
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "products", ignore = true)
-    Category toEntity(CategoryRequestDto dto);
+    Category toDomain(CategoryRequestDto dto);
     CategoryResponseDto toDto(Category category);
 }

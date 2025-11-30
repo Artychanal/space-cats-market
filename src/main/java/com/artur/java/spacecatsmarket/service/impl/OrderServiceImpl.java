@@ -1,11 +1,12 @@
 package com.artur.java.spacecatsmarket.service.impl;
 
-import com.artur.java.spacecatsmarket.domain.Order;
-import com.artur.java.spacecatsmarket.domain.OrderLine;
-import com.artur.java.spacecatsmarket.domain.Product;
 import com.artur.java.spacecatsmarket.dto.OrderRequestDto;
 import com.artur.java.spacecatsmarket.dto.OrderResponseDto;
+import com.artur.java.spacecatsmarket.mapper.OrderEntityMapper;
 import com.artur.java.spacecatsmarket.mapper.OrderMapper;
+import com.artur.java.spacecatsmarket.domain.Order;
+import com.artur.java.spacecatsmarket.persistence.entity.OrderEntity;
+import com.artur.java.spacecatsmarket.persistence.entity.ProductEntity;
 import com.artur.java.spacecatsmarket.repository.OrderRepository;
 import com.artur.java.spacecatsmarket.repository.ProductRepository;
 import com.artur.java.spacecatsmarket.repository.projection.ProductSalesProjection;
@@ -20,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -31,25 +31,26 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final OrderMapper orderMapper;
+    private final OrderEntityMapper orderEntityMapper;
 
     @Override
     public OrderResponseDto create(OrderRequestDto request) {
         if (orderRepository.findByNumber(request.getNumber()).isPresent()) {
             throw new DataIntegrityViolationException("Order with number %s already exists".formatted(request.getNumber()));
         }
-        Order order = orderMapper.toEntity(request);
+        var order = orderMapper.toDomain(request);
         order.setCreatedAt(OffsetDateTime.now());
-        order.setLines(buildLines(order, request));
-        Order saved = orderRepository.save(order);
-        return orderMapper.toDto(saved);
+        List<ProductEntity> products = loadProducts(order);
+        OrderEntity saved = orderRepository.save(orderEntityMapper.toEntity(order, products));
+        return orderMapper.toDto(orderEntityMapper.toDomain(saved));
     }
 
     @Override
     @Transactional(readOnly = true)
     public OrderResponseDto getByNumber(String number) {
-        Order order = orderRepository.findByNumber(number)
+        OrderEntity order = orderRepository.findByNumber(number)
                 .orElseThrow(() -> new OrderNotFoundException("Order %s not found".formatted(number)));
-        return orderMapper.toDto(order);
+        return orderMapper.toDto(orderEntityMapper.toDomain(order));
     }
 
     @Override
@@ -58,19 +59,11 @@ public class OrderServiceImpl implements OrderService {
         return productRepository.findTopSellingProducts(pageable);
     }
 
-    private List<OrderLine> buildLines(Order order, OrderRequestDto request) {
-        List<OrderLine> lines = new ArrayList<>();
-        request.getLines().forEach(l -> {
-            Product product = productRepository.findById(l.getProductId())
-                    .orElseThrow(() -> new ProductNotFoundException(
-                            "Product %s not found".formatted(l.getProductId())));
-            lines.add(OrderLine.builder()
-                    .order(order)
-                    .product(product)
-                    .qty(l.getQty())
-                    .priceAtPurchase(l.getPriceAtPurchase())
-                    .build());
-        });
-        return lines;
+    private List<ProductEntity> loadProducts(Order order) {
+        return order.getLines().stream()
+                .map(l -> productRepository.findById(l.getProductId())
+                        .orElseThrow(() -> new ProductNotFoundException(
+                                "Product %s not found".formatted(l.getProductId()))))
+                .toList();
     }
 }

@@ -5,95 +5,125 @@ import com.artur.java.spacecatsmarket.service.exception.CategoryNotFoundExceptio
 import com.artur.java.spacecatsmarket.service.exception.DuplicateProductException;
 import com.artur.java.spacecatsmarket.service.exception.OrderNotFoundException;
 import com.artur.java.spacecatsmarket.service.exception.ProductNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@WebMvcTest(controllers = ExceptionTranslatorTest.TestController.class)
+@Import({ExceptionTranslator.class, ExceptionTranslatorTest.TestConfig.class})
 class ExceptionTranslatorTest {
 
-    private ExceptionTranslator translator;
-    private HttpServletRequest request;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @BeforeEach
-    void setup() {
-        translator = new ExceptionTranslator();
-        MockHttpServletRequest mockReq = new MockHttpServletRequest();
-        mockReq.setRequestURI("/api/test");
-        request = mockReq;
+    @Test
+    @DisplayName("product not found -> 404 with path")
+    void productNotFound() throws Exception {
+        mockMvc.perform(get("/errors/product"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.path").value("/errors/product"));
     }
 
     @Test
-    @DisplayName("handleNotFound should map product not found to 404")
-    void handleNotFound() {
-        ResponseEntity<ErrorResponse> response =
-                translator.handleNotFound(new ProductNotFoundException("missing"), request);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getStatus()).isEqualTo(404);
-        assertThat(response.getBody().getPath()).isEqualTo("/api/test");
+    @DisplayName("category/order not found -> 404")
+    void domainNotFound() throws Exception {
+        mockMvc.perform(get("/errors/category"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/errors/order"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("handleDomainNotFound should cover category and order not found")
-    void handleDomainNotFound() {
-        ResponseEntity<ErrorResponse> categoryResp =
-                translator.handleDomainNotFound(new CategoryNotFoundException("no category"), request);
-        ResponseEntity<ErrorResponse> orderResp =
-                translator.handleDomainNotFound(new OrderNotFoundException("no order"), request);
-
-        assertThat(categoryResp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(orderResp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    @DisplayName("duplicate -> 409")
+    void duplicate() throws Exception {
+        mockMvc.perform(get("/errors/duplicate"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Conflict"));
     }
 
     @Test
-    @DisplayName("handleDuplicate should return 409 Conflict")
-    void handleDuplicate() {
-        ResponseEntity<ErrorResponse> response = translator.handleDuplicate(
-                new DuplicateProductException("duplicate"), request);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getStatus()).isEqualTo(409);
+    @DisplayName("rate service -> 502")
+    void rateService() throws Exception {
+        mockMvc.perform(get("/errors/rates"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.message").value("failure"));
     }
 
     @Test
-    @DisplayName("handleRates should translate RateServiceException to 502")
-    void handleRates() {
-        ResponseEntity<ErrorResponse> response = translator.handleRates(
-                new RateServiceException("failure", new RuntimeException("boom")), request);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_GATEWAY);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getMessage()).contains("failure");
+    @DisplayName("data integrity -> 409")
+    void dataIntegrity() throws Exception {
+        mockMvc.perform(get("/errors/data"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409));
     }
 
     @Test
-    @DisplayName("handleDataIntegrity should return 409")
-    void handleDataIntegrity() {
-        ResponseEntity<ErrorResponse> response = translator.handleDataIntegrity(
-                new DataIntegrityViolationException("constraint"), request);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getMessage()).contains("constraint");
+    @DisplayName("generic -> 500")
+    void generic() throws Exception {
+        mockMvc.perform(get("/errors/generic"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("Internal Server Error"));
     }
 
-    @Test
-    @DisplayName("handleGeneric should return 500")
-    void handleGeneric() {
-        ResponseEntity<ErrorResponse> response = translator.handleGeneric(
-                new RuntimeException("unexpected"), request);
+    @RestController
+    @RequestMapping("/errors")
+    public static class TestController {
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getMessage()).contains("unexpected");
+        @GetMapping("/product")
+        void product() {
+            throw new ProductNotFoundException("missing product");
+        }
+
+        @GetMapping("/category")
+        void category() {
+            throw new CategoryNotFoundException("missing category");
+        }
+
+        @GetMapping("/order")
+        void order() {
+            throw new OrderNotFoundException("missing order");
+        }
+
+        @GetMapping("/duplicate")
+        void duplicate() {
+            throw new DuplicateProductException("duplicate");
+        }
+
+        @GetMapping("/rates")
+        void rates() {
+            throw new RateServiceException("failure", new RuntimeException("boom"));
+        }
+
+        @GetMapping("/data")
+        void data() {
+            throw new DataIntegrityViolationException("constraint");
+        }
+
+        @GetMapping("/generic")
+        void generic() {
+            throw new RuntimeException("unexpected");
+        }
+    }
+
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        TestController testController() {
+            return new TestController();
+        }
     }
 }

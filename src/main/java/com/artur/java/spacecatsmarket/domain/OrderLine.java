@@ -1,7 +1,10 @@
 package com.artur.java.spacecatsmarket.domain;
 
-import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
@@ -10,28 +13,9 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "order_lines",
-        uniqueConstraints = @UniqueConstraint(name = "uk_order_line_order_product",
-                columnNames = {"order_id", "product_id"}))
 public class OrderLine {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_line_seq")
-    @SequenceGenerator(name = "order_line_seq", sequenceName = "order_line_seq", allocationSize = 1)
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_line_order"))
-    private Order order;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_line_product"))
-    private Product product;
-
-    @Column(nullable = false)
+    private Long productId;
     private int qty;
-
-    @Column(name = "price_at_purchase", nullable = false, precision = 15, scale = 2)
     private BigDecimal priceAtPurchase;
 }

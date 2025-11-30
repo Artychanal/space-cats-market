@@ -4,7 +4,6 @@ import com.artur.java.spacecatsmarket.SpaceCatsMarketApplication;
 import com.artur.java.spacecatsmarket.config.PostgresTestConfig;
 import com.artur.java.spacecatsmarket.dto.*;
 import com.artur.java.spacecatsmarket.repository.projection.ProductSalesProjection;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,40 +32,16 @@ class OrderServiceIT {
     @Autowired
     private CategoryService categoryService;
 
-    private ProductResponseDto productA;
-    private ProductResponseDto productB;
-
-    @BeforeEach
-    void setUp() {
-        categoryService.create(CategoryRequestDto.builder().code("FOOD").title("Food").build());
-        categoryService.create(CategoryRequestDto.builder().code("GEAR").title("Gear").build());
-        productA = productService.createProduct(ProductRequestDto.builder()
-                .name("Astro Tuna")
-                .description("Premium tuna for space cats")
-                .price(BigDecimal.valueOf(12.5))
-                .currency("USD")
-                .stock(50)
-                .categoryCode("FOOD")
-                .build());
-        productB = productService.createProduct(ProductRequestDto.builder()
-                .name("Comet Collar")
-                .description("Sparkling collar")
-                .price(BigDecimal.valueOf(30))
-                .currency("USD")
-                .stock(20)
-                .categoryCode("GEAR")
-                .build());
-    }
-
     @Test
     @DisplayName("Should create order and fetch it by natural id")
     void createAndFetchOrder() {
+        Products products = seedCatalog();
         OrderResponseDto order = orderService.create(OrderRequestDto.builder()
                 .number("ORD-001")
                 .customerEmail("pilot@cosmo.cats")
                 .lines(List.of(
                         OrderLineRequestDto.builder()
-                                .productId(productA.getId())
+                                .productId(products.a().getId())
                                 .qty(2)
                                 .priceAtPurchase(BigDecimal.valueOf(12.5))
                                 .build()))
@@ -76,23 +51,24 @@ class OrderServiceIT {
         OrderResponseDto fromDb = orderService.getByNumber("ORD-001");
         assertThat(fromDb.getCustomerEmail()).isEqualTo("pilot@cosmo.cats");
         assertThat(fromDb.getLines()).hasSize(1);
-        assertThat(fromDb.getLines().getFirst().getProductId()).isEqualTo(productA.getId());
+        assertThat(fromDb.getLines().getFirst().getProductId()).isEqualTo(products.a().getId());
     }
 
     @Test
     @DisplayName("Should aggregate product sales with projection")
     void getTopSellingProducts() {
+        Products products = seedCatalog();
         orderService.create(OrderRequestDto.builder()
                 .number("ORD-100")
                 .customerEmail("first@cosmo.cats")
                 .lines(List.of(
                         OrderLineRequestDto.builder()
-                                .productId(productA.getId())
+                                .productId(products.a().getId())
                                 .qty(3)
                                 .priceAtPurchase(BigDecimal.valueOf(12.5))
                                 .build(),
                         OrderLineRequestDto.builder()
-                                .productId(productB.getId())
+                                .productId(products.b().getId())
                                 .qty(1)
                                 .priceAtPurchase(BigDecimal.valueOf(30))
                                 .build()))
@@ -102,7 +78,7 @@ class OrderServiceIT {
                 .customerEmail("second@cosmo.cats")
                 .lines(List.of(
                         OrderLineRequestDto.builder()
-                                .productId(productB.getId())
+                                .productId(products.b().getId())
                                 .qty(5)
                                 .priceAtPurchase(BigDecimal.valueOf(30))
                                 .build()))
@@ -111,19 +87,20 @@ class OrderServiceIT {
         Page<ProductSalesProjection> topSelling = orderService.getTopSelling(PageRequest.of(0, 5));
 
         assertThat(topSelling.getContent()).hasSize(2);
-        assertThat(topSelling.getContent().getFirst().productId()).isEqualTo(productB.getId());
+        assertThat(topSelling.getContent().getFirst().productId()).isEqualTo(products.b().getId());
         assertThat(topSelling.getContent().getFirst().totalQuantity()).isEqualTo(6L);
     }
 
     @Test
     @DisplayName("Should reject duplicated order numbers")
     void rejectDuplicateOrders() {
+        Products products = seedCatalog();
         orderService.create(OrderRequestDto.builder()
                 .number("ORD-777")
                 .customerEmail("lucky@cosmo.cats")
                 .lines(List.of(
                         OrderLineRequestDto.builder()
-                                .productId(productA.getId())
+                                .productId(products.a().getId())
                                 .qty(1)
                                 .priceAtPurchase(BigDecimal.valueOf(12.5))
                                 .build()))
@@ -134,11 +111,35 @@ class OrderServiceIT {
                 .customerEmail("another@cosmo.cats")
                 .lines(List.of(
                         OrderLineRequestDto.builder()
-                                .productId(productA.getId())
+                                .productId(products.a().getId())
                                 .qty(1)
                                 .priceAtPurchase(BigDecimal.valueOf(12.5))
                                 .build()))
                 .build()))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    private record Products(ProductResponseDto a, ProductResponseDto b) {}
+
+    private Products seedCatalog() {
+        categoryService.createCategory(CategoryRequestDto.builder().code("FOOD").title("Food").build());
+        categoryService.createCategory(CategoryRequestDto.builder().code("GEAR").title("Gear").build());
+        ProductResponseDto productA = productService.createProduct(ProductRequestDto.builder()
+                .name("Astro Tuna")
+                .description("Premium tuna for space cats")
+                .price(BigDecimal.valueOf(12.5))
+                .currency("USD")
+                .stock(50)
+                .categoryCode("FOOD")
+                .build());
+        ProductResponseDto productB = productService.createProduct(ProductRequestDto.builder()
+                .name("Comet Collar")
+                .description("Sparkling collar")
+                .price(BigDecimal.valueOf(30))
+                .currency("USD")
+                .stock(20)
+                .categoryCode("GEAR")
+                .build());
+        return new Products(productA, productB);
     }
 }
