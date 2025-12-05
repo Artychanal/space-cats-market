@@ -3,8 +3,10 @@ package com.artur.java.spacecatsmarket;
 import com.artur.java.spacecatsmarket.config.PostgresTestConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(classes = {SpaceCatsMarketApplication.class, PostgresTestConfig.class})
+@ActiveProfiles("no-auth")
 class SpaceCatsMarketApplicationTests {
 
     @Test

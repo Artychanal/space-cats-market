@@ -1,6 +1,8 @@
 package com.artur.java.spacecatsmarket.web.exception;
 
 import com.artur.java.spacecatsmarket.external.exception.RateServiceException;
+import com.artur.java.spacecatsmarket.config.NoAuthSecurityConfig;
+import com.artur.java.spacecatsmarket.config.SecurityProperties;
 import com.artur.java.spacecatsmarket.service.exception.CategoryNotFoundException;
 import com.artur.java.spacecatsmarket.service.exception.DuplicateProductException;
 import com.artur.java.spacecatsmarket.service.exception.OrderNotFoundException;
@@ -13,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ExceptionTranslatorTest.TestController.class)
-@Import({ExceptionTranslator.class, ExceptionTranslatorTest.TestConfig.class})
+@Import({ExceptionTranslator.class, ExceptionTranslatorTest.TestConfig.class, NoAuthSecurityConfig.class})
+@ActiveProfiles("no-auth")
 class ExceptionTranslatorTest {
 
     @Autowired
@@ -124,6 +128,11 @@ class ExceptionTranslatorTest {
         @Bean
         TestController testController() {
             return new TestController();
+        }
+
+        @Bean
+        SecurityProperties securityProperties() {
+            return new SecurityProperties();
         }
     }
 }

@@ -7,6 +7,7 @@ import com.artur.java.spacecatsmarket.mapper.CategoryMapper;
 import com.artur.java.spacecatsmarket.repository.CategoryRepository;
 import com.artur.java.spacecatsmarket.service.CategoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryEntityMapper categoryEntityMapper;
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','API')")
     public CategoryResponseDto createCategory(CategoryRequestDto request) {
         var domain = categoryMapper.toDomain(request);
         var entity = categoryEntityMapper.toEntity(domain);
@@ -31,6 +33,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('ADMIN','USER','API')")
     public List<CategoryResponseDto> getAll() {
         return categoryRepository.findAll()
                 .stream()

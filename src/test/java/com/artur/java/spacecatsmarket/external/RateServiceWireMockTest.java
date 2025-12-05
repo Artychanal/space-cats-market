@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 
@@ -24,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
                 "clients.rates.read-timeout-ms=1500"
         })
 @AutoConfigureWireMock(port = 0)
+@ActiveProfiles("no-auth")
 class RateServiceWireMockTest {
 
     @Autowired
