@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductEntityMapper productEntityMapper;
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','API')")
     public ProductResponseDto createProduct(ProductRequestDto req) {
         CategoryEntity category = resolveCategory(req.getCategoryCode());
         if (productRepository.existsByNameIgnoreCaseAndCategory(req.getName(), category)) {
@@ -49,6 +51,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('ADMIN','USER','API')")
     public ProductResponseDto getProduct(Long id) {
         ProductEntity product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product %s not found".formatted(id)));
@@ -57,6 +60,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('ADMIN','USER','API')")
     public Page<ProductResponseDto> getAllProducts(Pageable pageable) {
         return productRepository.findAll(pageable)
                 .map(productEntityMapper::toDomain)
@@ -64,6 +68,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','API')")
     public ProductResponseDto updateProduct(Long id, ProductUpdateDto req) {
         ProductEntity product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product %s not found".formatted(id)));
@@ -96,6 +101,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteProductById(Long id) {
         if (!productRepository.existsById(id)) {
             log.warn("Delete called for non-existing product {}", id);

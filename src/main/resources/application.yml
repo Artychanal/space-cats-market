@@ -26,3 +26,10 @@ clients:
 feature:
   cosmo-cats-enabled: true
   kitty-products-enabled: false
+security:
+  api-key-header: X-API-KEY
+  api-key: ${SECURITY_API_KEY:cosmo-cats-api-key}
+  jwt:
+    secret: ${SECURITY_JWT_SECRET:cosmo-cats-jwt-secret-please-rotate}
+    jws-algorithm: HS256
+    roles-claim: roles

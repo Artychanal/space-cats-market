@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: cosmo-cats-no-auth
+  main:
+    allow-bean-definition-overriding: true
+
+security:
+  api-key: disabled-in-no-auth
+  jwt:
+    secret: disabled-in-no-auth

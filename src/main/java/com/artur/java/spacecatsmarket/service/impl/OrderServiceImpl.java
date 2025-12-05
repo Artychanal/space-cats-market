@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderEntityMapper orderEntityMapper;
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','USER','API')")
     public OrderResponseDto create(OrderRequestDto request) {
         if (orderRepository.findByNumber(request.getNumber()).isPresent()) {
             throw new DataIntegrityViolationException("Order with number %s already exists".formatted(request.getNumber()));
@@ -47,6 +49,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('ADMIN','USER','API')")
     public OrderResponseDto getByNumber(String number) {
         OrderEntity order = orderRepository.findByNumber(number)
                 .orElseThrow(() -> new OrderNotFoundException("Order %s not found".formatted(number)));
@@ -55,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<ProductSalesProjection> getTopSelling(Pageable pageable) {
         return productRepository.findTopSellingProducts(pageable);
     }
